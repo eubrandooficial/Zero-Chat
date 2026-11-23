@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ZeroChat</title>
+<style>
+:root{--bg:#111b21;--panel:#202c33;--panel2:#182229;--chat:#0b141a;--in:#202c33;--out:#005c4b;--acc:#00a884;--txt:#e9edef;--mut:#8696a0;--bdr:#2a3942;--danger:#ef4444}
+[data-theme="light"]{--bg:#f0f2f5;--panel:#ffffff;--panel2:#f8f9fa;--chat:#efeae2;--in:#ffffff;--out:#d9fdd3;--acc:#00a884;--txt:#111b21;--mut:#667781;--bdr:#e2e8f0}
+[data-theme="oled"]{--bg:#000000;--panel:#0a0a0a;--panel2:#050505;--chat:#000000;--in:#121212;--out:#004236;--acc:#00d9a6;--txt:#ffffff;--mut:#71717a;--bdr:#1f1f23}
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{background:var(--bg);color:var(--txt);height:100dvh;overflow:hidden;display:flex;font-size:14px}
+button,input,select,textarea{font:inherit;color:inherit;outline:none;border:none;background:none}
+button{cursor:pointer}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:4px}
+.hide{display:none!important}
+.icon-btn{width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:var(--mut);transition:.15s}
+.icon-btn:hover{background:rgba(128,128,128,.15);color:var(--txt)}
+.btn{background:var(--acc);color:#fff;padding:9px 14px;border-radius:8px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:.15s}
+.btn:hover{filter:brightness(1.08)}.btn.sec{background:var(--panel2);border:1px solid var(--bdr);color:var(--txt)}.btn.red{background:var(--danger)}
+.inp{width:100%;background:var(--panel2);border:1px solid var(--bdr);border-radius:8px;padding:9px 12px;color:var(--txt)}
+.inp:focus{border-color:var(--acc)}
+
+/* Auth */
+#authView{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}
+.auth-card{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--bdr);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+.auth-head{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:700;color:var(--acc)}
+.tabs{display:flex;background:var(--panel2);border-radius:8px;padding:3px;gap:3px}
+.tab{flex:1;padding:7px;border-radius:6px;font-weight:600;color:var(--mut);text-align:center}
+.tab.active{background:var(--acc);color:#fff}
+
+/* Layout */
+#app{display:flex;width:100%;height:100dvh;position:relative}
+aside{width:360px;max-width:100%;background:var(--bg);border-right:1px solid var(--bdr);display:flex;flex-direction:column;flex-shrink:0}
+.top-bar{height:58px;background:var(--panel);padding:0 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bdr);gap:8px}
+.av{width:40px;height:40px;border-radius:50%;object-fit:cover;background:var(--bdr);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover}
+.search-box{padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--bdr);display:flex;gap:8px;align-items:center}
+.search-wrap{flex:1;display:flex;align-items:center;gap:8px;background:var(--panel);padding:6px 12px;border-radius:8px}
+.nav-pills{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--bdr);overflow-x:auto}
+.pill{padding:5px 11px;border-radius:16px;background:var(--panel);color:var(--mut);font-size:12px;font-weight:600;white-space:nowrap}
+.pill.active{background:var(--acc);color:#fff}
+.chat-list{flex:1;overflow-y:auto}
+.chat-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid rgba(128,128,128,.08);cursor:pointer;transition:.12s}
+.chat-item:hover,.chat-item.active{background:var(--panel)}
+.ci-mid{flex:1;min-width:0}.ci-top{display:flex;justify-content:space-between;margin-bottom:3px}.ci-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci-sub{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{font-size:10px;background:var(--acc);color:#fff;padding:1px 6px;border-radius:10px}
+
+/* Main chat */
+main{flex:1;display:flex;flex-direction:column;background:var(--chat);position:relative;min-width:0}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--mut);text-align:center;padding:24px}
+.msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:6px;background-image:radial-gradient(rgba(128,128,128,.08) 1px,transparent 1px);background-size:20px 20px}
+.msg{max-width:74%;padding:7px 10px 5px;border-radius:10px;position:relative;word-break:break-word;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 1px rgba(0,0,0,.18)}
+.msg.in{align-self:flex-start;background:var(--in);border-top-left-radius:2px}
+.msg.out{align-self:flex-end;background:var(--out);border-top-right-radius:2px}
+.msg-sender{font-size:11px;font-weight:700;color:var(--acc)}
+.msg-meta{display:flex;align-items:center;justify-content:flex-end;gap:4px;font-size:10px;color:var(--mut);margin-top:2px}
+.msg img.media{max-width:220px;max-height:220px;border-radius:8px;object-fit:contain}
+.msg.sticker{background:transparent!important;box-shadow:none;padding:2px}
+.msg.sticker img{width:130px;height:130px;object-fit:contain}
+.pack-card{background:var(--panel2);border:1px solid var(--bdr);border-radius:10px;padding:10px;min-width:210px;display:flex;flex-direction:column;gap:6px}
+.pack-thumbs{display:flex;gap:4px;overflow-x:auto}.pack-thumbs img{width:44px;height:44px;object-fit:contain;background:rgba(0,0,0,.15);border-radius:6px}
+.composer{background:var(--panel);padding:8px 12px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--bdr)}
+.composer input{flex:1;background:var(--panel2);border-radius:20px;padding:9px 14px;border:1px solid var(--bdr)}
+
+/* Drawer: Emoji / GIF / Stickers */
+.drawer{height:310px;background:var(--panel);border-top:1px solid var(--bdr);display:flex;flex-direction:column}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--bdr);gap:8px}
+.drawer-cats{display:flex;gap:4px;padding:5px 8px;border-bottom:1px solid var(--bdr);overflow-x:auto}
+.drawer-body{flex:1;overflow-y:auto;padding:8px}
+.emoji-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:2px}
+.emoji-btn{height:34px;font-size:20px;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.emoji-btn:hover{background:rgba(128,128,128,.18)}
+.gif-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px}
+.gif-item{height:95px;border-radius:8px;overflow:hidden;cursor:pointer;background:var(--panel2)}
+.gif-item img{width:100%;height:100%;object-fit:cover}
+.stk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px}
+.stk-item{background:var(--panel2);border:1px solid var(--bdr);border-radius:8px;padding:5px;position:relative;display:flex;align-items:center;justify-content:center;height:74px;cursor:pointer}
+.stk-item img{max-width:100%;max-height:100%;object-fit:contain}
+.stk-fav{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.55);color:#fbbf24;display:flex;align-items:center;justify-content:center}
+
+/* Modals & Profile Banner */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:60;display:flex;align-items:center;justify-content:center;padding:14px}
+.modal{width:100%;max-width:440px;max-height:88dvh;background:var(--panel);border:1px solid var(--bdr);border-radius:14px;display:flex;flex-direction:column;overflow:hidden}
+.modal-head{padding:12px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;font-weight:700}
+.modal-body{padding:14px 16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.banner-box{position:relative;margin-bottom:32px}
+.banner-img{width:100%;height:110px;border-radius:10px;object-fit:cover;background:linear-gradient(135deg,var(--acc),#1e293b);display:block}
+.banner-av{position:absolute;left:14px;bottom:-28px;width:68px;height:68px;border:4px solid var(--panel);border-radius:50%;background:var(--panel2);overflow:hidden}
+.banner-av img{width:100%;height:100%;object-fit:cover}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid rgba(128,128,128,.1)}
+.lbl{font-size:12px;color:var(--mut);font-weight:600;margin-bottom:4px;display:block}
+
+/* Context menu & Call */
+.ctx{position:fixed;z-index:70;background:var(--panel);border:1px solid var(--bdr);border-radius:8px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.4);min-width:165px}
+.ctx button{width:100%;text-align:left;padding:8px 10px;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px}
+.ctx button:hover{background:rgba(128,128,128,.15)}
+#callModal{position:fixed;inset:0;background:rgba(5,10,14,.95);z-index:80;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:28px 16px;color:#fff}
+.call-videos{position:relative;width:100%;max-width:680px;flex:1;display:flex;align-items:center;justify-content:center;margin:14px 0;background:#0f172a;border-radius:16px;overflow:hidden}
+#remoteVid{width:100%;height:100%;object-fit:cover}
+#localVid{position:absolute;right:12px;bottom:12px;width:120px;height:160px;object-fit:cover;border-radius:10px;border:2px solid var(--acc);background:#000}
+.blurred{filter:blur(16px)}
+.call-ctrls{display:flex;gap:16px}
+.cbtn{width:52px;height:52px;border-radius:50%;background:#1e293b;color:#fff;display:flex;align-items:center;justify-content:center}
+.cbtn.on{background:var(--acc)}.cbtn.end{background:var(--danger)}
+
+#backBtn{display:none}
+@media(max-width:768px){
+  aside{width:100%}
+  #app.chat-open aside{display:none}
+  #app:not(.chat-open) main{display:none}
+  #backBtn{display:inline-flex}
+}
+</style>
+</head>
+<body data-theme="dark">
+
+<!-- AUTH -->
+<div id="authView">
+  <div class="auth-card">
+    <div class="auth-head"><span id="authLogo"></span>ZeroChat</div>
+    <div class="tabs">
+      <button class="tab active" data-auth="login">Entrar</button>
+      <button class="tab" data-auth="reg">Criar Conta</button>
+    </div>
+    <div>
+      <label class="lbl">Username fixo (Nick)</label>
+      <input id="aUser" class="inp" placeholder="ex: zero_user" autocomplete="username">
+    </div>
+    <div>
+      <label class="lbl">Palavra-passe</label>
+      <input id="aPass" type="password" class="inp" placeholder="Sua senha" autocomplete="current-password">
+    </div>
+    <div id="aMsg" style="font-size:12px;color:var(--danger)"></div>
+    <button id="aSubmit" class="btn">Entrar no ZeroChat</button>
+    <div style="font-size:11px;color:var(--mut);display:flex;align-items:center;gap:6px">
+      <span id="authLock"></span> Criptografia E2EE + Cifra Toki Pona no RTDB
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hide">
+  <aside>
+    <div class="top-bar">
+      <div style="display:flex;align-items:center;gap:10px;cursor:pointer" id="btnMyProfile">
+        <div class="av" id="myAv"></div>
+        <div><div id="myNick" style="font-weight:700"></div><div style="font-size:11px;color:var(--acc)">Online</div></div>
+      </div>
+      <div style="display:flex;gap:2px">
+        <button class="icon-btn" id="btnNewChat" title="Novo Contato / Grupo / Canal"></button>
+        <button class="icon-btn" id="btnThemeQuick" title="Alternar Tema"></button>
+        <button class="icon-btn" id="btnSettings" title="Configurações e Privacidade"></button>
+      </div>
+    </div>
+    <div class="search-box">
+      <div class="search-wrap"><span id="icSearch"></span><input id="searchInp" placeholder="Buscar conversa ou canal..."></div>
+    </div>
+    <div class="nav-pills" id="navPills">
+      <button class="pill active" data-f="all">Tudo</button>
+      <button class="pill" data-f="dm">Contatos (<span id="cntDm">0</span>/45)</button>
+      <button class="pill" data-f="group">Grupos (<span id="cntGrp">0</span>/7)</button>
+      <button class="pill" data-f="channel">Canais (<span id="cntCh">0</span>/3)</button>
+    </div>
+    <div class="chat-list" id="chatList"></div>
+  </aside>
+
+  <main>
+    <div id="emptyMain" class="empty-state">
+      <div id="emptyLogo" style="color:var(--acc)"></div>
+      <h2>ZeroChat Web</h2>
+      <p style="max-width:320px;font-size:13px">Mensagens protegidas com criptografia de ponta a ponta (ECDH + AES-GCM) e codificadas em Toki Pona no banco.</p>
+    </div>
+    <div id="chatArea" class="hide" style="display:flex;flex-direction:column;height:100%">
+      <div class="top-bar">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0">
+          <button class="icon-btn" id="backBtn"></button>
+          <div class="av" id="peerAv" style="cursor:pointer"></div>
+          <div style="min-width:0;cursor:pointer" id="peerInfoBtn">
+            <div id="peerName" style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+            <div id="peerSub" style="font-size:11px;color:var(--mut)"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:2px;align-items:center">
+          <button class="btn sec hide" id="btnFollowCh" style="padding:5px 10px;font-size:12px">Seguir</button>
+          <button class="icon-btn" id="btnAudioCall" title="Ligação de Voz"></button>
+          <button class="icon-btn" id="btnVideoCall" title="Ligação de Vídeo"></button>
+          <button class="icon-btn" id="btnChatOpts" title="Opções da Conversa"></button>
+        </div>
+      </div>
+
+      <div class="msgs" id="msgsBox"></div>
+
+      <div id="drawer" class="drawer hide">
+        <div class="drawer-head">
+          <div class="tabs" style="width:230px">
+            <button class="tab active" data-d="emoji">Emojis</button>
+            <button class="tab" data-d="gif">GIFs</button>
+            <button class="tab" data-d="sticker">Figurinhas</button>
+          </div>
+          <input id="drawerSearch" class="inp hide" style="padding:5px 9px;font-size:12px;max-width:160px" placeholder="Buscar GIF...">
+          <button class="icon-btn" id="btnCloseDrawer"></button>
+        </div>
+        <div class="drawer-cats" id="drawerCats"></div>
+        <div class="drawer-body" id="drawerBody"></div>
+      </div>
+
+      <div id="chReadOnly" class="hide" style="padding:12px;text-align:center;background:var(--panel);color:var(--mut);font-size:12px;border-top:1px solid var(--bdr)">Apenas o criador pode publicar neste canal de atualizações.</div>
+      <div class="composer" id="composer">
+        <button class="icon-btn" id="btnDrawer"></button>
+        <input id="msgInp" placeholder="Digite uma mensagem...">
+        <button class="icon-btn" id="btnSend" style="background:var(--acc);color:#fff"></button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL GENÉRICO -->
+<div id="modalBg" class="modal-bg hide">
+  <div class="modal">
+    <div class="modal-head"><span id="modalTitle"></span><button class="icon-btn" id="modalClose"></button></div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- CONTEXT MENU MENSAGEM -->
+<div id="ctxMenu" class="ctx hide"></div>
+
+<!-- CALL OVERLAY -->
+<div id="callModal" class="hide">
+  <div style="text-align:center">
+    <div id="callPeer" style="font-size:20px;font-weight:700"></div>
+    <div id="callStatus" style="font-size:13px;color:#94a3b8">Conectando...</div>
+  </div>
+  <div class="call-videos">
+    <video id="remoteVid" autoplay playsinline></video>
+    <video id="localVid" autoplay playsinline muted></video>
+    <div id="audioPlaceholder" class="hide" style="display:flex;flex-direction:column;align-items:center;gap:10px;color:#94a3b8"></div>
+  </div>
+  <div class="call-ctrls">
+    <button class="cbtn" id="cMute" title="Mutar Áudio"></button>
+    <button class="cbtn hide" id="cBlur" title="Desfocar Câmera (Blur)"></button>
+    <button class="cbtn on hide" id="cAccept" title="Atender"></button>
+    <button class="cbtn end" id="cEnd" title="Encerrar"></button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, set, get, push, update, remove, onValue, off } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDBaPueyum9o5ShN3o2JC_8du4L7AxJQ2U",
+  authDomain: "zero-talk.firebaseapp.com",
+  databaseURL: "https://zero-talk-default-rtdb.firebaseio.com",
+  projectId: "zero-talk",
+  storageBucket: "zero-talk.firebasestorage.app",
+  messagingSenderId: "398412383285",
+  appId: "1:398412383285:web:4d2dd06fbf5e646619dd7c"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const KLIPY_KEY = "gMEJ48fwJheZ4gEEw3lJwhPt8ACOVxsvqZh9hroAYcfalc7Z4erCDP7Qe5km7M05";
+
+/* ===== SVG ICONS (ZERO EMOJIS NA UI) ===== */
+const IC = {
+  logo:'<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1 1 12 20z"/><path d="M8.5 9.5c.3-.6.6-.6 1-.6h.5c.2 0 .4.1.5.4l.7 1.7c.1.2 0 .5-.1.6l-.5.6c-.1.1-.1.3 0 .5.5.9 1.3 1.7 2.2 2.2.2.1.4.1.5 0l.6-.5c.2-.2.4-.2.6-.1l1.7.7c.3.1.4.3.4.5v.5c0 .4-.4.9-.9 1.1-.8.3-2.3.2-4.2-.9-1.9-1.1-3.1-3-3.4-3.8-.3-.8-.2-1.8 0-2.4z"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 0 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>',
+  back:'<path d="m15 18-6-6 6-6"/>',
+  phone:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+  video:'<rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-4v12l-6-4z"/>',
+  more:'<circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>',
+  smile:'<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>',
+  send:'<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+  close:'<path d="M18 6 6 18M6 6l12 12"/>',
+  lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  trash:'<path d="M3 6h18M8 6V4h8v2m-1 0v14a2 2 0 0 1-2 2H11a2 2 0 0 1-2-2V6"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  dcheck:'<path d="m18 6-9 9-4-4m17-5-9 9-1.5-1.5"/>',
+  star:'<polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"/>',
+  mic:'<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>',
+  blur:'<circle cx="12" cy="12" r="9" stroke-dasharray="3 2"/><circle cx="12" cy="12" r="4"/>',
+  end:'<path d="M10.7 13.3a16 16 0 0 0 2.6 0M2 15.5c5.5-4.5 14.5-4.5 20 0l-2.3 2.8a2 2 0 0 1-2.5.4l-2.3-1.4a2 2 0 0 1-1-1.7v-1.2c-1.3-.2-2.6-.2-3.8 0v1.2a2 2 0 0 1-1 1.7l-2.3 1.4a2 2 0 0 1-2.5-.4z"/>',
+  share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>'
+};
+const ic = (k, s=19) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[k]||''}</svg>`;
+const $ = id => document.getElementById(id);
+
+/* ===== CRIPTOGRAFIA E2EE + CIFRA TOKI PONA NO RTDB ===== */
+const TOKI = ['soweli','kijete','telo','seli','mun','kon','ilo','lape','musi','pona','wawa','laso','pipi','kala','waso','pan'];
+const TOKI_MAP = Object.fromEntries(TOKI.map((w,i)=>[w,i]));
+const toToki = bytes => Array.from(bytes, b => TOKI[b>>4]+' '+TOKI[b&15]).join(' ');
+const fromToki = str => {
+  const p = str.trim().split(/\s+/), out = new Uint8Array(p.length/2);
+  for(let i=0;i<out.length;i++) out[i]=(TOKI_MAP[p[i*2]]<<4)|TOKI_MAP[p[i*2+1]];
+  return out;
+};
+const sha256 = async t => {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+  return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');
+};
+const deriveAesFromStr = async s => {
+  const raw = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ZC::'+s));
+  return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt','decrypt']);
+};
+const aesEnc = async (key, obj) => {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv}, key, new TextEncoder().encode(JSON.stringify(obj))));
+  const full = new Uint8Array(12 + ct.length); full.set(iv); full.set(ct, 12);
+  return toToki(full);
+};
+const aesDec = async (key, tokiStr) => {
+  if(!tokiStr || typeof tokiStr!=='string') return null;
+  try{
+    const full = fromToki(tokiStr), iv = full.slice(0,12), ct = full.slice(12);
+    const pt = await crypto.subtle.decrypt({name:'AES-GCM',iv}, key, ct);
+    return JSON.parse(new TextDecoder().decode(pt));
+  }catch{return null;}
+};
+
+/* ===== ESTADO ===== */
+const S = {
+  me:null, passKey:null, myPriv:null, pubCache:{}, dmKeys:{}, roomKeys:{},
+  meta:{contacts:[],groups:[],channels:[],followed:[],blocked:[],stickers:[],favs:[],packs:[]},
+  profile:{avatar:'',banner:'',bio:'Disponível no ZeroChat',theme:'dark',accent:'#00a884',chatBg:'',auto24h:false,
+    priv:{lastSeen:'all',photo:'all',bio:'all',receipts:true,groupInv:'all'}},
+  chats:{}, activeChat:null, filter:'all', msgUnsub:null, callUnsub:null,
+  drawerOpen:false, drawerTab:'emoji', emojiCat:0, pc:null, localStream:null, blurOn:false, muted:false, blurRaf:0
+};
+
+const DIR_KEY_PROMISE = deriveAesFromStr('ZeroChat_Directory_Key_2026');
+async function getRoomKey(chatId){
+  if(!S.roomKeys[chatId]) S.roomKeys[chatId] = await deriveAesFromStr('Room_'+chatId);
+  return S.roomKeys[chatId];
+}
+async function getDmKey(peer){
+  if(S.dmKeys[peer]) return S.dmKeys[peer];
+  if(!S.pubCache[peer]){
+    const snap = await get(ref(db,`users/${peer}/pub`));
+    if(snap.exists()) S.pubCache[peer] = await crypto.subtle.importKey('jwk', snap.val(), {name:'ECDH',namedCurve:'P-256'}, true, []);
+  }
+  if(S.pubCache[peer] && S.myPriv){
+    S.dmKeys[peer] = await crypto.subtle.deriveKey({name:'ECDH',public:S.pubCache[peer]}, S.myPriv, {name:'AES-GCM',length:256}, false, ['encrypt','decrypt']);
+    return S.dmKeys[peer];
+  }
+  return getRoomKey(dmId(S.me, peer));
+}
+const dmId = (a,b) => 'dm_' + [a,b].sort().join('__');
+const cleanNick = s => s.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+
+/* ===== INIT UI ICONS ===== */
+$('authLogo').innerHTML = ic('logo',28); $('authLock').innerHTML = ic('lock',14);
+$('emptyLogo').innerHTML = ic('logo',64); $('icSearch').innerHTML = ic('search',16);
+$('btnNewChat').innerHTML = ic('plus'); $('btnThemeQuick').innerHTML = ic('sun'); $('btnSettings').innerHTML = ic('gear');
+$('backBtn').innerHTML = ic('back'); $('btnAudioCall').innerHTML = ic('phone'); $('btnVideoCall').innerHTML = ic('video');
+$('btnChatOpts').innerHTML = ic('more'); $('btnDrawer').innerHTML = ic('smile'); $('btnSend').innerHTML = ic('send',17);
+$('btnCloseDrawer').innerHTML = ic('close',16); $('modalClose').innerHTML = ic('close');
+$('cMute').innerHTML = ic('mic'); $('cBlur').innerHTML = ic('blur'); $('cAccept').innerHTML = ic('phone'); $('cEnd').innerHTML = ic('end');
+
+/* ===== AUTH ===== */
+let authMode = 'login';
+document.querySelectorAll('[data-auth]').forEach(b=>b.onclick=()=>{
+  authMode = b.dataset.auth;
+  document.querySelectorAll('[data-auth]').forEach(x=>x.classList.toggle('active',x===b));
+  $('aSubmit').textContent = authMode==='login' ? 'Entrar no ZeroChat' : 'Criar Conta';
+  $('aMsg').textContent = '';
+});
+
+$('aSubmit').onclick = async () => {
+  const nick = cleanNick($('aUser').value), pass = $('aPass').value;
+  if(nick.length<3 || pass.length<3) return $('aMsg').textContent='Use nick e senha com 3+ caracteres (a-z, 0-9, _).';
+  $('aMsg').textContent = 'Processando criptografia...';
+  const passHash = await sha256(nick+':'+pass);
+  const passKey = await deriveAesFromStr(nick+':'+pass);
+  const uRef = ref(db, `users/${nick}`);
+  const snap = await get(uRef);
+
+  if(authMode==='reg'){
+    if(snap.exists()) return $('aMsg').textContent='Esse username já existe!';
+    const kp = await crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'}, true, ['deriveKey']);
+    const pub = await crypto.subtle.exportKey('jwk', kp.publicKey);
+    const privJwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
+    const privEnc = await aesEnc(passKey, privJwk);
+    const dirKey = await DIR_KEY_PROMISE;
+    await set(uRef, { passHash, pub, privEnc, pubProf: await aesEnc(dirKey, S.profile) });
+    await set(ref(db, `userMeta/${nick}`), await aesEnc(passKey, S.meta));
+    localStorage.setItem('zc_sess', JSON.stringify({nick, pass}));
+    await enterApp(nick, passKey, kp.privateKey);
+  } else {
+    if(!snap.exists()) return $('aMsg').textContent='Usuário não encontrado.';
+    const u = snap.val();
+    if(u.passHash !== passHash) return $('aMsg').textContent='Palavra-passe incorreta.';
+    const privJwk = await aesDec(passKey, u.privEnc);
+    if(!privJwk) return $('aMsg').textContent='Erro ao decifrar chave E2EE.';
+    const privKey = await crypto.subtle.importKey('jwk', privJwk, {name:'ECDH',namedCurve:'P-256'}, true, ['deriveKey']);
+    localStorage.setItem('zc_sess', JSON.stringify({nick, pass}));
+    await enterApp(nick, passKey, privKey);
+  }
+};
+
+async function enterApp(nick, passKey, privKey){
+  S.me = nick; S.passKey = passKey; S.myPriv = privKey;
+  $('authView').classList.add('hide'); $('app').classList.remove('hide');
+  $('myNick').textContent = '@' + nick;
+  const dirKey = await DIR_KEY_PROMISE;
+  const uSnap = await get(ref(db, `users/${nick}`));
+  if(uSnap.exists()){
+    const prof = await aesDec(dirKey, uSnap.val().pubProf);
+    if(prof) S.profile = {...S.profile, ...prof, priv:{...S.profile.priv, ...(prof.priv||{})}};
+  }
+  const mSnap = await get(ref(db, `userMeta/${nick}`));
+  if(mSnap.exists()){
+    const meta = await aesDec(passKey, mSnap.val());
+    if(meta) S.meta = {...S.meta, ...meta};
+  }
+  applyTheme(); renderMyAv(); updateStatus(true);
+  window.addEventListener('beforeunload', ()=>updateStatus(false));
+  await syncAllChats();
+  listenCalls();
+  setInterval(runAutoClean24h, 60000);
+}
+
+async function saveProfile(){
+  const dirKey = await DIR_KEY_PROMISE;
+  await set(ref(db, `users/${S.me}/pubProf`), await aesEnc(dirKey, S.profile));
+  applyTheme(); renderMyAv();
+}
+async function saveMeta(){
+  await set(ref(db, `userMeta/${S.me}`), await aesEnc(S.passKey, S.meta));
+  updateCounts();
+}
+function updateStatus(online){
+  if(S.me) set(ref(db,`status/${S.me}`), {online, last:Date.now()});
+}
+function applyTheme(){
+  document.body.dataset.theme = S.profile.theme === 'custom' ? 'dark' : S.profile.theme;
+  document.documentElement.style.setProperty('--acc', S.profile.theme==='custom' ? S.profile.accent : (S.profile.theme==='oled'?'#00d9a6':'#00a884'));
+  document.documentElement.style.setProperty('--chat', S.profile.theme==='custom'&&S.profile.chatBg ? S.profile.chatBg : '');
+}
+function renderMyAv(){
+  $('myAv').innerHTML = S.profile.avatar ? `<img src="${S.profile.avatar}">` : S.me[0].toUpperCase();
+}
+function updateCounts(){
+  $('cntDm').textContent = S.meta.contacts.length;
+  $('cntGrp').textContent = S.meta.groups.length;
+  $('cntCh').textContent = S.meta.channels.length;
+}
+
+/* ===== SINCRONIZAR CHATS, GRUPOS, CANAIS ===== */
+async function syncAllChats(){
+  updateCounts();
+  const ids = [...S.meta.contacts.map(c=>dmId(S.me,c)), ...S.meta.groups, ...S.meta.followed, ...S.meta.channels];
+  const unique = [...new Set(ids)];
+  const dirKey = await DIR_KEY_PROMISE;
+  for(const id of unique){
+    const snap = await get(ref(db, `chats/${id}/meta`));
+    if(snap.exists()){
+      const m = snap.val();
+      S.chats[id] = m;
+      if(m.type==='dm'){
+        const peer = Object.keys(m.members||{}).find(x=>x!==S.me) || id.replace('dm_','').replace(S.me,'').replace('__','');
+        const ps = await get(ref(db, `users/${peer}/pubProf`));
+        if(ps.exists()) S.chats[id].peerProf = await aesDec(dirKey, ps.val());
+        S.chats[id].peerNick = peer;
+      }
+    }
+  }
+  renderChatList();
+}
+
+function renderChatList(){
+  const q = $('searchInp').value.trim().toLowerCase();
+  const box = $('chatList'); box.innerHTML = '';
+  const list = Object.entries(S.chats).filter(([id,c])=>{
+    if(S.filter==='dm' && c.type!=='dm') return false;
+    if(S.filter==='group' && c.type!=='group') return false;
+    if(S.filter==='channel' && c.type!=='channel') return false;
+    const title = (c.type==='dm' ? '@'+c.peerNick : c.name).toLowerCase();
+    return !q || title.includes(q);
+  });
+  if(!list.length) box.innerHTML = `<div style="padding:24px;text-align:center;color:var(--mut);font-size:13px">Nenhuma conversa. Clique em <b>+</b> acima para adicionar contato, criar grupo ou canal.</div>`;
+  list.forEach(([id,c])=>{
+    const isDm = c.type==='dm', peer = c.peerNick, pp = c.peerProf;
+    const canShowPhoto = !isDm || canSee(pp?.priv?.photo, peer);
+    const avUrl = isDm ? (canShowPhoto ? pp?.avatar : '') : c.avatar;
+    const title = isDm ? '@'+peer : c.name;
+    const div = document.createElement('div');
+    div.className = 'chat-item' + (S.activeChat===id?' active':'');
+    div.innerHTML = `<div class="av">${avUrl?`<img src="${avUrl}">`:(title.replace('@','')[0]||'?').toUpperCase()}</div>
+      <div class="ci-mid"><div class="ci-top"><span class="ci-name">${esc(title)}</span><span class="badge">${c.type==='dm'?'DM':c.type==='group'?'Grupo':'Canal'}</span></div>
+      <div class="ci-sub">${isDm?(canSee(pp?.priv?.bio,peer)?esc(pp?.bio||'ZeroChat'):'Privado'):(c.type==='channel'?'Canal de Atualizações':'Grupo')}</div></div>`;
+    div.onclick = ()=>openChat(id);
+    box.appendChild(div);
+  });
+}
+
+function canSee(rule, peer){
+  if(!rule || rule==='all') return true;
+  if(rule==='none') return false;
+  return S.meta.contacts.includes(peer);
+}
+const esc = s => String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+document.querySelectorAll('#navPills .pill').forEach(p=>p.onclick=()=>{
+  S.filter = p.dataset.f;
+  document.querySelectorAll('#navPills .pill').forEach(x=>x.classList.toggle('active',x===p));
+  renderChatList();
+});
+$('searchInp').oninput = renderChatList;
+
+/* ===== ABRIR CONVERSA & MENSAGENS ===== */
+async function openChat(id){
+  S.activeChat = id;
+  $('app').classList.add('chat-open');
+  $('emptyMain').classList.add('hide');
+  $('chatArea').classList.remove('hide');
+  renderChatList();
+
+  const c = S.chats[id], isDm = c.type==='dm', isCh = c.type==='channel';
+  const peer = c.peerNick, pp = c.peerProf;
+  const avUrl = isDm ? (canSee(pp?.priv?.photo,peer)?pp?.avatar:'') : c.avatar;
+  $('peerAv').innerHTML = avUrl ? `<img src="${avUrl}">` : ((isDm?peer:c.name)[0]||'?').toUpperCase();
+  $('peerName').textContent = isDm ? '@'+peer : c.name;
+
+  $('btnAudioCall').classList.toggle('hide', !isDm);
+  $('btnVideoCall').classList.toggle('hide', !isDm);
+  $('btnFollowCh').classList.toggle('hide', !isCh || c.owner===S.me);
+  const following = S.meta.followed.includes(id);
+  $('btnFollowCh').textContent = following ? 'Seguindo' : 'Seguir';
+
+  const canPost = !isCh || c.owner===S.me;
+  $('composer').classList.toggle('hide', !canPost);
+  $('chReadOnly').classList.toggle('hide', canPost);
+
+  if(isDm && canSee(pp?.priv?.lastSeen, peer)){
+    const st = (await get(ref(db,`status/${peer}`))).val();
+    $('peerSub').textContent = st?.online ? 'Online agora' : (st?.last ? 'Visto '+new Date(st.last).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : 'Offline');
+  } else {
+    $('peerSub').textContent = isDm ? 'Criptografia E2EE' : (isCh ? `Canal por @${c.owner}` : `${Object.keys(c.members||{}).length} membros`);
+  }
+
+  if(S.msgUnsub) S.msgUnsub();
+  const mRef = ref(db, `chats/${id}/msgs`);
+  S.msgUnsub = onValue(mRef, async snap => {
+    const val = snap.val() || {}, box = $('msgsBox');
+    box.innerHTML = '';
+    const key = isDm ? await getDmKey(peer) : await getRoomKey(id);
+    const entries = Object.entries(val).sort((a,b)=>a[1].ts-b[1].ts);
+    for(const [mid, m] of entries){
+      if(m.delFor?.[S.me] || (S.profile.auto24h && Date.now()-m.ts > 86400000)) continue;
+      if(S.meta.blocked.includes(m.from)) continue;
+      const isOut = m.from === S.me;
+      const div = document.createElement('div');
+      let bodyHtml = '';
+      if(m.delAll){
+        bodyHtml = `<span style="font-style:italic;color:var(--mut);font-size:12px">Mensagem apagada</span>`;
+      } else {
+        const data = await aesDec(key, m.payload);
+        if(!data) bodyHtml = `<span style="color:var(--mut);font-size:12px">[Cifra indisponível]</span>`;
+        else if(data.t==='text') bodyHtml = `<span>${esc(data.v)}</span>`;
+        else if(data.t==='gif') bodyHtml = `<img class="media" src="${esc(data.v)}">`;
+        else if(data.t==='sticker'){ div.classList.add('sticker'); bodyHtml = `<img src="${esc(data.v)}">`; }
+        else if(data.t==='pack'){
+          bodyHtml = `<div class="pack-card">
+            <div style="font-weight:700">${esc(data.pack.name)}</div>
+            <div style="font-size:11px;color:var(--mut)">Autor: ${esc(data.pack.author)} • ${data.pack.items.length} figurinhas</div>
+            <div class="pack-thumbs">${data.pack.items.slice(0,5).map(u=>`<img src="${esc(u)}">`).join('')}</div>
+            <button class="btn" style="padding:6px;font-size:12px" data-import='${esc(JSON.stringify(data.pack))}'>Importar Pacote</button>
+          </div>`;
+        }
+      }
+      div.className += (div.classList.contains('sticker')?'':'msg ') + (isOut?'out':'in');
+      if(div.classList.contains('sticker')) div.className = `msg sticker ${isOut?'out':'in'}`;
+      const time = new Date(m.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      div.innerHTML = `${(!isOut && !isDm)?`<div class="msg-sender">@${esc(m.from)}</div>`:''}${bodyHtml}
+        <div class="msg-meta"><span>${time}</span>${isOut?ic(S.profile.priv.receipts?'dcheck':'check',13):''}</div>`;
+      div.oncontextmenu = e => { e.preventDefault(); openMsgCtx(e, id, mid, isOut); };
+      div.onclick = e => {
+        if(e.target.dataset.import){
+          const pk = JSON.parse(e.target.dataset.import);
+          S.meta.packs.push(pk); pk.items.forEach(u=>{if(!S.meta.stickers.includes(u)) S.meta.stickers.push(u);});
+          saveMeta(); alert('Pacote importado!');
+        }
+      };
+      box.appendChild(div);
+    }
+    box.scrollTop = box.scrollHeight;
+  });
+}
+
+$('backBtn').onclick = () => $('app').classList.remove('chat-open');
+
+async function sendMsg(t, v, extra={}){
+  if(!S.activeChat) return;
+  const id = S.activeChat, c = S.chats[id];
+  if(c.type==='dm' && S.meta.blocked.includes(c.peerNick)) return alert('Usuário bloqueado.');
+  const key = c.type==='dm' ? await getDmKey(c.peerNick) : await getRoomKey(id);
+  const payload = await aesEnc(key, {t, v, ...extra});
+  await push(ref(db, `chats/${id}/msgs`), { from:S.me, ts:Date.now(), payload });
+}
+$('btnSend').onclick = () => { const v=$('msgInp').value.trim(); if(!v) return; $('msgInp').value=''; sendMsg('text',v); };
+$('msgInp').onkeydown = e => { if(e.key==='Enter') $('btnSend').click(); };
+
+function openMsgCtx(e, chatId, mid, isOut){
+  const m = $('ctxMenu'); m.classList.remove('hide');
+  m.style.left = Math.min(e.clientX, innerWidth-180)+'px';
+  m.style.top = Math.min(e.clientY, innerHeight-110)+'px';
+  m.innerHTML = `<button id="ctxMe">${ic('trash',15)} Apagar para mim</button>
+    ${isOut?`<button id="ctxAll" style="color:var(--danger)">${ic('trash',15)} Apagar para todos</button>`:''}`;
+  $('ctxMe').onclick = async () => { await set(ref(db,`chats/${chatId}/msgs/${mid}/delFor/${S.me}`),true); m.classList.add('hide'); };
+  if(isOut) $('ctxAll').onclick = async () => { await update(ref(db,`chats/${chatId}/msgs/${mid}`),{delAll:true,payload:''}); m.classList.add('hide'); };
+}
+document.addEventListener('click', e => { if(!e.target.closest('#ctxMenu')) $('ctxMenu').classList.add('hide'); });
+
+/* ===== LIMPEZA AUTOMÁTICA 24H ===== */
+async function runAutoClean24h(){
+  if(!S.profile.auto24h || !S.activeChat) return;
+  const snap = await get(ref(db,`chats/${S.activeChat}/msgs`));
+  if(!snap.exists()) return;
+  const now = Date.now();
+  for(const [mid,m] of Object.entries(snap.val())){
+    if(now - m.ts > 86400000) await remove(ref(db,`chats/${S.activeChat}/msgs/${mid}`));
+  }
+}
+
+/* ===== EMOJIS OFICIAIS POR CATEGORIA + KLIPY GIFS + FIGURINHAS/PACKS ===== */
+const EMOJI_CATS = [
+  ['Rostos',[[0x1F600,0x1F64F]]],
+  ['Pessoas',[[0x1F440,0x1F487],[0x1F90C,0x1F93A]]],
+  ['Animais',[[0x1F400,0x1F43F],[0x1F980,0x1F9AE]]],
+  ['Comida',[[0x1F32D,0x1F37F],[0x1F950,0x1F96F]]],
+  ['Atividades',[[0x1F3A0,0x1F3CC],[0x26BD,0x26BE]]],
+  ['Viagens',[[0x1F680,0x1F6C5],[0x1F300,0x1F320]]],
+  ['Objetos',[[0x1F4A0,0x1F4FF],[0x1F500,0x1F53D]]],
+  ['Símbolos',[[0x2600,0x26FF],[0x2700,0x27BF],[0x1F1E6,0x1F1FF]]]
+];
+function buildEmojis(catIdx){
+  const ranges = EMOJI_CATS[catIdx][1], out = [];
+  if(catIdx===7){ // Bandeiras populares + simbolos
+    const cc = ['BR','US','PT','JP','AR','FR','DE','ES','IT','GB','CA','MX','KR'];
+    cc.forEach(c=>out.push(String.fromCodePoint(0x1F1E6+c.charCodeAt(0)-65,0x1F1E6+c.charCodeAt(1)-65)));
+  }
+  ranges.forEach(([a,b])=>{
+    if(a===0x1F1E6) return;
+    for(let cp=a;cp<=b;cp++){
+      try{ const ch = String.fromCodePoint(cp); if(!/[\uFE00-\uFE0F]/.test(ch)) out.push(ch); }catch{}
+    }
+  });
+  return out;
+}
+
+$('btnDrawer').onclick = () => { S.drawerOpen=!S.drawerOpen; $('drawer').classList.toggle('hide',!S.drawerOpen); if(S.drawerOpen) renderDrawer(); };
+$('btnCloseDrawer').onclick = () => { S.drawerOpen=false; $('drawer').classList.add('hide'); };
+document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{
+  S.drawerTab = b.dataset.d;
+  document.querySelectorAll('[data-d]').forEach(x=>x.classList.toggle('active',x===b));
+  renderDrawer();
+});
+
+let gifTimer;
+$('drawerSearch').oninput = () => { clearTimeout(gifTimer); gifTimer = setTimeout(()=>loadGifs($('drawerSearch').value.trim()), 350); };
+
+async function renderDrawer(){
+  const cats = $('drawerCats'), body = $('drawerBody'), sInp = $('drawerSearch');
+  cats.innerHTML = ''; body.innerHTML = '';
+  sInp.classList.toggle('hide', S.drawerTab!=='gif');
+  if(S.drawerTab==='emoji'){
+    EMOJI_CATS.forEach(([name],i)=>{
+      const b = document.createElement('button'); b.className='pill'+(S.emojiCat===i?' active':'');
+      b.textContent = name; b.onclick=()=>{S.emojiCat=i; renderDrawer();}; cats.appendChild(b);
+    });
+    const grid = document.createElement('div'); grid.className='emoji-grid';
+    buildEmojis(S.emojiCat).forEach(em=>{
+      const b = document.createElement('button'); b.className='emoji-btn'; b.textContent=em;
+      b.onclick=()=>{ $('msgInp').value += em; $('msgInp').focus(); }; grid.appendChild(b);
+    });
+    body.appendChild(grid);
+  } else if(S.drawerTab==='gif'){
+    loadGifs(sInp.value.trim());
+  } else {
+    cats.innerHTML = `<button class="pill active" id="stAll">Minhas</button><button class="pill" id="stFav">Favoritas</button>
+      <button class="pill" id="stPacks">Pacotes (${S.meta.packs.length})</button>
+      <button class="btn" style="padding:3px 9px;font-size:11px;margin-left:auto" id="stNew">+ Criar Figurinha</button>
+      <button class="btn sec" style="padding:3px 9px;font-size:11px" id="stNewPack">+ Pacote</button>`;
+    const showStks = list => {
+      body.innerHTML = '<div class="stk-grid"></div>';
+      const g = body.firstChild;
+      if(!list.length) g.innerHTML='<div style="grid-column:1/-1;color:var(--mut);font-size:12px">Nenhuma figurinha ainda.</div>';
+      list.forEach(u=>{
+        const isFav = S.meta.favs.includes(u);
+        const d = document.createElement('div'); d.className='stk-item';
+        d.innerHTML = `<img src="${u}"><button class="stk-fav" title="Favoritar">${ic('star',11)}</button>`;
+        d.querySelector('.stk-fav').style.opacity = isFav ? '1' : '.4';
+        d.onclick = e => {
+          if(e.target.closest('.stk-fav')){
+            S.meta.favs = isFav ? S.meta.favs.filter(x=>x!==u) : [...S.meta.favs, u];
+            saveMeta(); showStks(list);
+          } else sendMsg('sticker', u);
+        };
+        g.appendChild(d);
+      });
+    };
+    showStks(S.meta.stickers);
+    $('stAll').onclick=()=>showStks(S.meta.stickers);
+    $('stFav').onclick=()=>showStks(S.meta.favs);
+    $('stPacks').onclick=()=>{
+      body.innerHTML = '';
+      if(!S.meta.packs.length) return body.innerHTML='<div style="color:var(--mut);font-size:12px">Nenhum pacote criado.</div>';
+      S.meta.packs.forEach((pk,idx)=>{
+        const d = document.createElement('div'); d.className='pack-card'; d.style.marginBottom='8px';
+        d.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+          <div><b>${esc(pk.name)}</b> <span style="font-size:11px;color:var(--mut)">por ${esc(pk.author)}</span></div>
+          <div style="display:flex;gap:4px">
+            <button class="btn sec" style="padding:4px 8px;font-size:11px" data-add="${idx}">+ Add</button>
+            <button class="btn" style="padding:4px 8px;font-size:11px" data-sh="${idx}">${ic('share',12)} Compartilhar</button>
+          </div></div>
+          <div class="pack-thumbs">${pk.items.map(u=>`<img src="${u}">`).join('')}</div>`;
+        d.querySelector('[data-sh]').onclick=()=>sendMsg('pack',null,{pack:pk});
+        d.querySelector('[data-add]').onclick=()=>openAddStickerToPackModal(idx);
+        body.appendChild(d);
+      });
+    };
+    $('stNew').onclick = openCreateStickerModal;
+    $('stNewPack').onclick = openCreatePackModal;
+  }
+}
+
+async function loadGifs(q){
+  const body = $('drawerBody'); body.innerHTML = '<div style="color:var(--mut);font-size:12px">Carregando GIFs Klipy...</div>';
+  try{
+    const url = q
+      ? `https://api.klipy.com/api/v1/${KLIPY_KEY}/gifs/search?page=1&per_page=24&q=${encodeURIComponent(q)}&customer_id=${S.me}&locale=BR`
+      : `https://api.klipy.com/api/v1/${KLIPY_KEY}/gifs/trending?page=1&per_page=24&customer_id=${S.me}&locale=BR`;
+    const r = await (await fetch(url)).json();
+    const items = r?.data?.data || r?.data || [];
+    body.innerHTML = '<div class="gif-grid"></div>';
+    items.forEach(g=>{
+      const src = g.file?.md?.gif?.url || g.file?.sm?.gif?.url || g.file?.hd?.gif?.url;
+      if(!src) return;
+      const d = document.createElement('div'); d.className='gif-item';
+      d.innerHTML = `<img src="${src}" loading="lazy">`;
+      d.onclick = () => sendMsg('gif', src);
+      body.firstChild.appendChild(d);
+    });
+  }catch{ body.innerHTML='<div style="color:var(--danger);font-size:12px">Falha ao carregar Klipy GIFs.</div>'; }
+}
+
+/* ===== MODAIS: FIGURINHAS, PACOTES, PERFIL, PRIVACIDADE, NOVO CHAT ===== */
+function openModal(title, html, onMount){
+  $('modalTitle').textContent = title; $('modalBody').innerHTML = html;
+  $('modalBg').classList.remove('hide');
+  if(onMount) onMount();
+}
+$('modalClose').onclick = () => $('modalBg').classList.add('hide');
+
+const compressImg = (file, max=256) => new Promise(res=>{
+  const r = new FileReader();
+  r.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      const sc = Math.min(max/img.width, max/img.height, 1);
+      c.width = img.width*sc; c.height = img.height*sc;
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      res(c.toDataURL('image/webp', 0.82));
+    };
+    img.src = r.result;
+  };
+  r.readAsDataURL(file);
+});
+
+function openCreateStickerModal(){
+  openModal('Criar Figurinha', `
+    <label class="lbl">Via URL da Imagem</label><input id="stkUrl" class="inp" placeholder="https://...">
+    <label class="lbl">Ou Upload de Arquivo</label><input id="stkFile" type="file" accept="image/*" class="inp">
+    <button class="btn" id="stkSave">Salvar Figurinha</button>
+  `, ()=>{
+    $('stkSave').onclick = async () => {
+      let src = $('stkUrl').value.trim();
+      if($('stkFile').files[0]) src = await compressImg($('stkFile').files[0], 220);
+      if(!src) return;
+      S.meta.stickers.push(src); await saveMeta(); $('modalBg').classList.add('hide'); renderDrawer();
+    };
+  });
+}
+function openCreatePackModal(){
+  openModal('Criar Pacote de Figurinhas', `
+    <label class="lbl">Nome do Pacote</label><input id="pkName" class="inp" placeholder="Ex: Memes ZeroChat">
+    <label class="lbl">Nome do Autor</label><input id="pkAuth" class="inp" value="@${S.me}">
+    <button class="btn" id="pkSave">Criar Pacote</button>
+  `, ()=>{
+    $('pkSave').onclick = async () => {
+      const name=$('pkName').value.trim(), author=$('pkAuth').value.trim();
+      if(!name||!author) return;
+      S.meta.packs.push({name, author, items:S.meta.stickers.slice(0,8)});
+      await saveMeta(); $('modalBg').classList.add('hide'); renderDrawer();
+    };
+  });
+}
+function openAddStickerToPackModal(idx){
+  openModal('Adicionar ao Pacote', `<div class="stk-grid" id="pkPick"></div>`, ()=>{
+    S.meta.stickers.forEach(u=>{
+      const d = document.createElement('div'); d.className='stk-item'; d.innerHTML=`<img src="${u}">`;
+      d.onclick = async () => {
+        if(!S.meta.packs[idx].items.includes(u)) S.meta.packs[idx].items.push(u);
+        await saveMeta(); $('modalBg').classList.add('hide'); renderDrawer();
+      };
+      $('pkPick').appendChild(d);
+    });
+  });
+}
+
+/* NOVO CONTATO (45) / GRUPO (7) / CANAL (3) / EXPLORAR CANAIS */
+$('btnNewChat').onclick = () => openModal('Nova Conversa / Grupo / Canal', `
+  <div class="tabs"><button class="tab active" data-nc="dm">Contato</button><button class="tab" data-nc="grp">Grupo</button>
+    <button class="tab" data-nc="ch">Criar Canal</button><button class="tab" data-nc="dir">Explorar Canais</button></div>
+  <div id="ncBody"></div>
+`, ()=>{
+  const renderNc = mode => {
+    const b = $('ncBody');
+    if(mode==='dm'){
+      b.innerHTML = `<label class="lbl">Nick do Usuário (${S.meta.contacts.length}/45 contatos)</label>
+        <input id="ncNick" class="inp" placeholder="ex: maria"><button class="btn" style="margin-top:8px;width:100%" id="ncGo">Adicionar e Conversar</button>`;
+      $('ncGo').onclick = async () => {
+        if(S.meta.contacts.length>=45) return alert('Limite de 45 contatos atingido!');
+        const peer = cleanNick($('ncNick').value);
+        if(!peer || peer===S.me) return alert('Nick inválido.');
+        if(!(await get(ref(db,`users/${peer}`))).exists()) return alert('Usuário não existe.');
+        if(!S.meta.contacts.includes(peer)) S.meta.contacts.push(peer);
+        const id = dmId(S.me, peer);
+        await set(ref(db,`chats/${id}/meta`), {type:'dm', members:{[S.me]:true,[peer]:true}, createdAt:Date.now()});
+        await saveMeta(); await syncAllChats(); $('modalBg').classList.add('hide'); openChat(id);
+      };
+    } else if(mode==='grp'){
+      b.innerHTML = `<label class="lbl">Nome do Grupo (${S.meta.groups.length}/7 grupos)</label><input id="gName" class="inp">
+        <label class="lbl" style="margin-top:6px">Membros (nicks separados por vírgula)</label><input id="gMems" class="inp" placeholder="joao, ana">
+        <button class="btn" style="margin-top:8px;width:100%" id="gGo">Criar Grupo</button>`;
+      $('gGo').onclick = async () => {
+        if(S.meta.groups.length>=7) return alert('Limite de 7 grupos atingido!');
+        const name = $('gName').value.trim(); if(!name) return;
+        const mems = {[S.me]:true};
+        $('gMems').value.split(',').map(cleanNick).filter(Boolean).forEach(m=>mems[m]=true);
+        const id = 'grp_' + Date.now();
+        await set(ref(db,`chats/${id}/meta`), {type:'group', name, owner:S.me, members:mems, createdAt:Date.now()});
+        S.meta.groups.push(id); await saveMeta(); await syncAllChats(); $('modalBg').classList.add('hide'); openChat(id);
+      };
+    } else if(mode==='ch'){
+      b.innerHTML = `<label class="lbl">Nome do Canal de Atualizações (${S.meta.channels.length}/3 criados)</label><input id="cName" class="inp">
+        <button class="btn" style="margin-top:8px;width:100%" id="cGo">Criar Canal</button>`;
+      $('cGo').onclick = async () => {
+        if(S.meta.channels.length>=3) return alert('Limite de 3 canais por pessoa atingido!');
+        const name = $('cName').value.trim(); if(!name) return;
+        const id = 'ch_' + Date.now();
+        await set(ref(db,`chats/${id}/meta`), {type:'channel', name, owner:S.me, createdAt:Date.now()});
+        await set(ref(db,`channelsDir/${id}`), {name, owner:S.me});
+        S.meta.channels.push(id); await saveMeta(); await syncAllChats(); $('modalBg').classList.add('hide'); openChat(id);
+      };
+    } else {
+      b.innerHTML = '<div id="dirList" style="font-size:13px;color:var(--mut)">Buscando canais...</div>';
+      get(ref(db,'channelsDir')).then(s=>{
+        const d = s.val()||{}; $('dirList').innerHTML = '';
+        Object.entries(d).forEach(([cid,info])=>{
+          const row = document.createElement('div'); row.className='row';
+          const fol = S.meta.followed.includes(cid) || S.meta.channels.includes(cid);
+          row.innerHTML = `<div><b>${esc(info.name)}</b><div style="font-size:11px;color:var(--mut)">@${esc(info.owner)}</div></div>
+            <button class="btn ${fol?'sec':''}" style="padding:5px 10px;font-size:12px">${fol?'Abrir':'Seguir'}</button>`;
+          row.querySelector('button').onclick = async () => {
+            if(!S.meta.followed.includes(cid) && !S.meta.channels.includes(cid)){ S.meta.followed.push(cid); await saveMeta(); }
+            await syncAllChats(); $('modalBg').classList.add('hide'); openChat(cid);
+          };
+          $('dirList').appendChild(row);
+        });
+      });
+    }
+  };
+  renderNc('dm');
+  document.querySelectorAll('[data-nc]').forEach(t=>t.onclick=()=>{
+    document.querySelectorAll('[data-nc]').forEach(x=>x.classList.toggle('active',x===t)); renderNc(t.dataset.nc);
+  });
+});
+
+$('btnFollowCh').onclick = async () => {
+  const id = S.activeChat;
+  if(S.meta.followed.includes(id)) S.meta.followed = S.meta.followed.filter(x=>x!==id);
+  else S.meta.followed.push(id);
+  await saveMeta(); $('btnFollowCh').textContent = S.meta.followed.includes(id)?'Seguindo':'Seguir';
+};
+
+/* PERFIL DISCORD-STYLE & CONFIGURAÇÕES / PRIVACIDADE / TEMAS */
+$('btnMyProfile').onclick = () => openProfileEditor();
+function openProfileEditor(){
+  openModal('Meu Perfil (@'+S.me+')', `
+    <div class="banner-box">
+      ${S.profile.banner?`<img class="banner-img" src="${S.profile.banner}">`:`<div class="banner-img"></div>`}
+      <div class="banner-av">${S.profile.avatar?`<img src="${S.profile.avatar}">`:`<div class="av" style="width:100%;height:100%">${S.me[0].toUpperCase()}</div>`}</div>
+    </div>
+    <label class="lbl">Foto de Perfil (URL ou Upload)</label>
+    <div style="display:flex;gap:6px"><input id="pAvUrl" class="inp" value="${esc(S.profile.avatar)}"><input id="pAvFile" type="file" accept="image/*" style="width:95px"></div>
+    <label class="lbl">Banner estilo Discord (URL ou Upload)</label>
+    <div style="display:flex;gap:6px"><input id="pBnUrl" class="inp" value="${esc(S.profile.banner)}"><input id="pBnFile" type="file" accept="image/*" style="width:95px"></div>
+    <label class="lbl">Biografia</label><textarea id="pBio" class="inp" rows="2">${esc(S.profile.bio)}</textarea>
+    <button class="btn" id="pSave">Salvar Perfil</button>
+  `, ()=>{
+    $('pSave').onclick = async () => {
+      S.profile.avatar = $('pAvFile').files[0] ? await compressImg($('pAvFile').files[0],200) : $('pAvUrl').value.trim();
+      S.profile.banner = $('pBnFile').files[0] ? await compressImg($('pBnFile').files[0],480) : $('pBnUrl').value.trim();
+      S.profile.bio = $('pBio').value.trim();
+      await saveProfile(); $('modalBg').classList.add('hide');
+    };
+  });
+}
+
+$('peerInfoBtn').onclick = () => {
+  const c = S.chats[S.activeChat]; if(!c || c.type!=='dm') return;
+  const pp = c.peerProf || {}, p = c.peerNick;
+  openModal('Perfil de @'+p, `
+    <div class="banner-box">
+      ${(canSee(pp.priv?.photo,p)&&pp.banner)?`<img class="banner-img" src="${pp.banner}">`:`<div class="banner-img"></div>`}
+      <div class="banner-av">${(canSee(pp.priv?.photo,p)&&pp.avatar)?`<img src="${pp.avatar}">`:`<div class="av" style="width:100%;height:100%">${p[0].toUpperCase()}</div>`}</div>
+    </div>
+    <div><b>@${esc(p)}</b></div>
+    <div style="font-size:13px;color:var(--mut)">${canSee(pp.priv?.bio,p)?esc(pp.bio||'Sem bio'):'Biografia oculta pela privacidade.'}</div>
+    <button class="btn sec" id="blkBtn">${S.meta.blocked.includes(p)?'Desbloquear':'Bloquear Contato'}</button>
+  `, ()=>{
+    $('blkBtn').onclick = async () => {
+      S.meta.blocked = S.meta.blocked.includes(p) ? S.meta.blocked.filter(x=>x!==p) : [...S.meta.blocked, p];
+      await saveMeta(); $('modalBg').classList.add('hide');
+    };
+  });
+};
+
+$('btnThemeQuick').onclick = async () => {
+  const ord = ['dark','light','oled'];
+  S.profile.theme = ord[(ord.indexOf(S.profile.theme)+1)%ord.length];
+  await saveProfile();
+};
+
+$('btnSettings').onclick = () => openModal('Configurações & Privacidade', `
+  <label class="lbl">Tema Visual</label>
+  <select id="sTheme" class="inp"><option value="dark">Escuro (WhatsApp)</option><option value="light">Modo Claro</option>
+    <option value="oled">Preto OLED</option><option value="custom">Cores Personalizadas</option></select>
+  <div id="custColors" class="${S.profile.theme==='custom'?'':'hide'}" style="display:flex;gap:8px">
+    <div style="flex:1"><label class="lbl">Cor Destaque</label><input type="color" id="sAcc" value="${S.profile.accent}" style="width:100%;height:34px"></div>
+    <div style="flex:1"><label class="lbl">Fundo Chat</label><input type="color" id="sBg" value="${S.profile.chatBg||'#0b141a'}" style="width:100%;height:34px"></div>
+  </div>
+  <div style="font-weight:700;margin-top:4px">Privacidade</div>
+  <div class="row"><span>Visto por último / Online</span><select id="prLast" class="inp" style="width:130px"><option value="all">Todos</option><option value="contacts">Contatos</option><option value="none">Ninguém</option></select></div>
+  <div class="row"><span>Foto de Perfil e Banner</span><select id="prPhoto" class="inp" style="width:130px"><option value="all">Todos</option><option value="contacts">Contatos</option><option value="none">Ninguém</option></select></div>
+  <div class="row"><span>Biografia</span><select id="prBio" class="inp" style="width:130px"><option value="all">Todos</option><option value="contacts">Contatos</option><option value="none">Ninguém</option></select></div>
+  <div class="row"><span>Convites de Grupo</span><select id="prGrp" class="inp" style="width:130px"><option value="all">Todos</option><option value="contacts">Contatos</option><option value="none">Ninguém</option></select></div>
+  <div class="row"><span>Confirmação de Leitura</span><input type="checkbox" id="prRec" ${S.profile.priv.receipts?'checked':''}></div>
+  <div class="row"><span>Limpeza Automática 24h</span><input type="checkbox" id="s24h" ${S.profile.auto24h?'checked':''}></div>
+  <button class="btn" id="sSave">Salvar Configurações</button>
+  <button class="btn red" id="sWipe">Apagar Dados de Todas Conversas</button>
+  <button class="btn sec" id="sLogout">Sair da Conta</button>
+`, ()=>{
+  $('sTheme').value = S.profile.theme;
+  $('prLast').value = S.profile.priv.lastSeen; $('prPhoto').value = S.profile.priv.photo;
+  $('prBio').value = S.profile.priv.bio; $('prGrp').value = S.profile.priv.groupInv;
+  $('sTheme').onchange = () => $('custColors').classList.toggle('hide', $('sTheme').value!=='custom');
+  $('sSave').onclick = async () => {
+    S.profile.theme = $('sTheme').value; S.profile.accent = $('sAcc').value; S.profile.chatBg = $('sBg').value;
+    S.profile.auto24h = $('s24h').checked;
+    S.profile.priv = {lastSeen:$('prLast').value, photo:$('prPhoto').value, bio:$('prBio').value, groupInv:$('prGrp').value, receipts:$('prRec').checked};
+    await saveProfile(); $('modalBg').classList.add('hide');
+  };
+  $('sWipe').onclick = async () => {
+    if(!confirm('Apagar mensagens para você em todas as conversas?')) return;
+    for(const cid of Object.keys(S.chats)){
+      const s = await get(ref(db,`chats/${cid}/msgs`));
+      if(s.exists()) for(const mid of Object.keys(s.val())) await set(ref(db,`chats/${cid}/msgs/${mid}/delFor/${S.me}`),true);
+    }
+    $('modalBg').classList.add('hide'); if(S.activeChat) openChat(S.activeChat);
+  };
+  $('sLogout').onclick = () => { localStorage.removeItem('zc_sess'); location.reload(); };
+});
+
+$('btnChatOpts').onclick = () => {
+  if(!S.activeChat) return;
+  openModal('Opções da Conversa', `
+    <button class="btn red" id="coClear">Apagar Mensagens desta Conversa (para mim)</button>
+    <button class="btn sec" id="co24">Limpeza 24h está: ${S.profile.auto24h?'ATIVADA':'DESATIVADA'}</button>
+  `, ()=>{
+    $('coClear').onclick = async () => {
+      const s = await get(ref(db,`chats/${S.activeChat}/msgs`));
+      if(s.exists()) for(const mid of Object.keys(s.val())) await set(ref(db,`chats/${S.activeChat}/msgs/${mid}/delFor/${S.me}`),true);
+      $('modalBg').classList.add('hide');
+    };
+    $('co24').onclick = async () => { S.profile.auto24h=!S.profile.auto24h; await saveProfile(); $('modalBg').classList.add('hide'); };
+  });
+};
+
+/* ===== LIGAÇÕES DE VOZ & VÍDEO (WEBRTC + BLUR REAL NO VÍDEO) ===== */
+const RTC_CFG = {iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
+$('btnAudioCall').onclick = () => startCall('audio');
+$('btnVideoCall').onclick = () => startCall('video');
+
+async function startCall(mode){
+  const peer = S.chats[S.activeChat]?.peerNick; if(!peer) return;
+  await setupCallUI(peer, mode, false);
+  const offer = await S.pc.createOffer();
+  await S.pc.setLocalDescription(offer);
+  await set(ref(db,`calls/${peer}`), {from:S.me, mode, offer:{type:offer.type,sdp:offer.sdp}, ts:Date.now()});
+  onValue(ref(db,`calls/${peer}/answer`), async s => {
+    if(s.exists() && S.pc && !S.pc.currentRemoteDescription){
+      await S.pc.setRemoteDescription(new RTCSessionDescription(s.val()));
+      $('callStatus').textContent = 'Em chamada';
+    }
+  });
+}
+
+function listenCalls(){
+  onValue(ref(db,`calls/${S.me}`), async s => {
+    const c = s.val(); if(!c || !c.offer || c.answered) return;
+    $('callModal').classList.remove('hide');
+    $('callPeer').textContent = '@'+c.from; $('callStatus').textContent = c.mode==='video'?'Chamada de Vídeo recebida...':'Chamada de Voz recebida...';
+    $('cAccept').classList.remove('hide'); $('cBlur').classList.toggle('hide', c.mode!=='video');
+    $('cAccept').onclick = async () => {
+      $('cAccept').classList.add('hide');
+      await setupCallUI(c.from, c.mode, true);
+      await S.pc.setRemoteDescription(new RTCSessionDescription(c.offer));
+      const ans = await S.pc.createAnswer();
+      await S.pc.setLocalDescription(ans);
+      await update(ref(db,`calls/${S.me}`), {answered:true, answer:{type:ans.type,sdp:ans.sdp}});
+      $('callStatus').textContent = 'Em chamada';
+    };
+  });
+}
+
+async function setupCallUI(peer, mode, isCallee){
+  $('callModal').classList.remove('hide');
+  $('callPeer').textContent = '@'+peer; $('callStatus').textContent = isCallee?'Conectado':'Chamando...';
+  $('cBlur').classList.toggle('hide', mode!=='video');
+  $('localVid').classList.toggle('hide', mode!=='video');
+  $('remoteVid').classList.toggle('hide', mode!=='video');
+  $('audioPlaceholder').classList.toggle('hide', mode==='video');
+  $('audioPlaceholder').innerHTML = ic('mic',48)+'<span>Ligação de Voz em andamento</span>';
+
+  S.localStream = await navigator.mediaDevices.getUserMedia({audio:true, video:mode==='video'});
+  $('localVid').srcObject = S.localStream;
+  S.pc = new RTCPeerConnection(RTC_CFG);
+  S.localStream.getTracks().forEach(t=>S.pc.addTrack(t, S.localStream));
+  S.pc.ontrack = e => { $('remoteVid').srcObject = e.streams[0]; };
+  const sigTarget = isCallee ? S.me : peer;
+  S.pc.onicecandidate = e => { if(e.candidate) push(ref(db,`calls/${sigTarget}/ice_${S.me}`), e.candidate.toJSON()); };
+  onValue(ref(db,`calls/${sigTarget}/ice_${peer}`), s => {
+    if(s.exists()) Object.values(s.val()).forEach(c=>S.pc?.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{}));
+  });
+}
+
+$('cMute').onclick = () => {
+  S.muted = !S.muted; S.localStream?.getAudioTracks().forEach(t=>t.enabled=!S.muted);
+  $('cMute').classList.toggle('on', S.muted);
+};
+$('cBlur').onclick = async () => {
+  S.blurOn = !S.blurOn;
+  $('cBlur').classList.toggle('on', S.blurOn);
+  $('localVid').classList.toggle('blurred', S.blurOn);
+  const sender = S.pc?.getSenders().find(s=>s.track?.kind==='video');
+  if(!sender || !S.localStream) return;
+  cancelAnimationFrame(S.blurRaf);
+  if(S.blurOn){
+    const vid = $('localVid'), cvs = document.createElement('canvas');
+    cvs.width = 320; cvs.height = 240; const ctx = cvs.getContext('2d');
+    const draw = () => { ctx.filter='blur(16px)'; ctx.drawImage(vid,0,0,320,240); S.blurRaf=requestAnimationFrame(draw); };
+    draw();
+    await sender.replaceTrack(cvs.captureStream(20).getVideoTracks()[0]);
+  } else {
+    await sender.replaceTrack(S.localStream.getVideoTracks()[0]);
+  }
+};
+$('cEnd').onclick = async () => {
+  cancelAnimationFrame(S.blurRaf); S.blurOn=false; S.muted=false;
+  S.localStream?.getTracks().forEach(t=>t.stop()); S.pc?.close(); S.pc=null;
+  $('callModal').classList.add('hide'); $('cAccept').classList.add('hide');
+  await remove(ref(db,`calls/${S.me}`));
+  if(S.activeChat && S.chats[S.activeChat]?.peerNick) await remove(ref(db,`calls/${S.chats[S.activeChat].peerNick}`));
+};
+
+/* AUTO-LOGIN */
+const saved = localStorage.getItem('zc_sess');
+if(saved){
+  const {nick, pass} = JSON.parse(saved);
+  $('aUser').value = nick; $('aPass').value = pass;
+  $('aSubmit').click();
+}
+</script>
+</body>
+</html>
